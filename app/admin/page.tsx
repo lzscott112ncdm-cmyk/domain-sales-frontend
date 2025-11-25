@@ -15,7 +15,7 @@ export default function AdminPage() {
   const API_BASE = process.env.NEXT_PUBLIC_API_BASE!;
 const ADMIN_TOKEN = process.env.NEXT_PUBLIC_ADMIN_TOKEN!;
 
-const [isRecalcLoading, setIsRecalcLoading] = React.useState(false);
+const [isRecalcLoading, setIsRecalcLoading] = useState(false);
 
 async function handleRecalculateBRL() {
   try {
