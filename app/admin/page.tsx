@@ -15,34 +15,6 @@ export default function AdminPage() {
   const ADMIN_TOKEN = process.env.NEXT_PUBLIC_ADMIN_TOKEN!;
 
   const [isRecalcLoading, setIsRecalcLoading] = useState(false);
-
-  async function handleRecalculateBRL() {
-    try {
-      setIsRecalcLoading(true);
-
-      const res = await fetch(`${API_BASE}/api/admin/recalculate-brl`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${ADMIN_TOKEN}`,
-        },
-      });
-
-      const data = await res.json().catch(() => ({}));
-
-      if (!res.ok) {
-        alert(`Error: ${data.error || 'Failed to recalculate BRL prices.'}`);
-        return;
-      }
-
-      alert(`Updated BRL prices for ${data.updated} domains.`);
-    } catch (e) {
-      alert('Unexpected error while recalculating BRL prices.');
-    } finally {
-      setIsRecalcLoading(false);
-    }
-  }
-
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [token, setToken] = useState('');
   const [tokenInput, setTokenInput] = useState('');
@@ -52,18 +24,26 @@ export default function AdminPage() {
   const [editingDomain, setEditingDomain] = useState<Domain | null>(null);
   const [error, setError] = useState('');
 
+  // -----------------------------------------
+  // FIXED: REAL AUTH CHECK
+  // -----------------------------------------
   useEffect(() => {
-    const storedToken = localStorage.getItem('admin_token');
-    if (storedToken) {
-      setToken(storedToken);
+    const stored = localStorage.getItem('admin_token');
+    if (stored && stored === ADMIN_TOKEN) {
       setIsAuthenticated(true);
-      loadDomains(storedToken);
+      setToken(stored);
+      loadDomains(stored);
     }
   }, []);
 
   const handleLogin = () => {
     if (!tokenInput.trim()) {
       setError('Please enter a token');
+      return;
+    }
+
+    if (tokenInput !== ADMIN_TOKEN) {
+      setError('Invalid admin token');
       return;
     }
 
@@ -76,10 +56,35 @@ export default function AdminPage() {
 
   const handleLogout = () => {
     localStorage.removeItem('admin_token');
-    setToken('');
     setIsAuthenticated(false);
+    setToken('');
     setDomains([]);
   };
+
+  async function handleRecalculateBRL() {
+    try {
+      setIsRecalcLoading(true);
+      const res = await fetch(`${API_BASE}/api/admin/recalculate-brl`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${ADMIN_TOKEN}`,
+        },
+      });
+
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        alert(`Error: ${data.error || 'Failed to recalculate BRL prices.'}`);
+        return;
+      }
+
+      alert(`Updated BRL prices for ${data.updated} domains.`);
+    } catch (e) {
+      alert('Unexpected error while recalculating BRL prices.');
+    } finally {
+      setIsRecalcLoading(false);
+    }
+  }
 
   const loadDomains = async (authToken: string) => {
     setLoading(true);
@@ -94,71 +99,38 @@ export default function AdminPage() {
   };
 
   const handleCreate = async (data: any) => {
-    try {
-      await createDomain(token, data);
-      await loadDomains(token);
-      setShowForm(false);
-      alert('Domain created successfully!');
-    } catch (error: any) {
-      throw new Error(error.message || 'Failed to create domain');
-    }
+    await createDomain(token, data);
+    await loadDomains(token);
+    setShowForm(false);
+    alert('Domain created!');
   };
 
   const handleUpdate = async (data: any) => {
     if (!editingDomain) return;
 
-    try {
-      await updateDomain(token, editingDomain.id, data);
-      await loadDomains(token);
-      setEditingDomain(null);
-      setShowForm(false);
-      alert('Domain updated successfully!');
-    } catch (error: any) {
-      throw new Error(error.message || 'Failed to update domain');
-    }
+    await updateDomain(token, editingDomain.id, data);
+    await loadDomains(token);
+    setEditingDomain(null);
+    setShowForm(false);
+    alert('Domain updated!');
   };
 
   const handleDelete = async (domain: Domain) => {
-    if (!confirm(`Are you sure you want to delete ${domain.domain_name || domain.domainName}?`)) {
-      return;
-    }
+    if (!confirm(`Delete ${domain.domain_name || domain.domainName}?`)) return;
 
-    try {
-      await deleteDomain(token, domain.id);
-      await loadDomains(token);
-      alert('Domain deleted successfully!');
-    } catch (error: any) {
-      alert(error.message || 'Failed to delete domain');
-    }
+    await deleteDomain(token, domain.id);
+    await loadDomains(token);
+    alert('Domain deleted.');
   };
 
-  const handleEdit = (domain: Domain) => {
-    setEditingDomain(domain);
-    setShowForm(true);
-  };
-
-  const handleCancelForm = () => {
-    setShowForm(false);
-    setEditingDomain(null);
-  };
-
-  // -------------------------
-  // LOGIN SCREEN
-  // -------------------------
   if (!isAuthenticated) {
     return (
       <div className="container mx-auto px-4 py-16">
-        <Card className="max-w-md mx-auto">
+        <Card className="max-w-md mx-auto p-6">
           <div className="text-center mb-6">
             <Lock className="w-16 h-16 text-gray-400 mx-auto mb-4" />
             <h1 className="text-3xl font-bold text-gray-900 mb-2">Admin Login</h1>
-            <p className="text-gray-600">Enter your admin token to access the dashboard</p>
-
-            {process.env.NEXT_PUBLIC_ADMIN_HINT && (
-              <p className="text-sm text-gray-500 mt-2">
-                {process.env.NEXT_PUBLIC_ADMIN_HINT}
-              </p>
-            )}
+            <p className="text-gray-600">Enter your admin token</p>
           </div>
 
           {error && (
@@ -170,13 +142,13 @@ export default function AdminPage() {
           <div className="space-y-4">
             <Input
               type="password"
-              placeholder="Enter your admin token"
+              placeholder="Admin token"
               value={tokenInput}
               onChange={(e) => setTokenInput(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && handleLogin()}
+              onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
             />
 
-            <Button onClick={handleLogin} className="w-full">
+            <Button className="w-full" onClick={handleLogin}>
               Login
             </Button>
           </div>
@@ -185,12 +157,10 @@ export default function AdminPage() {
     );
   }
 
-  // -------------------------
-  // AUTHENTICATED SCREEN
-  // -------------------------
   return (
     <div className="container mx-auto px-4 py-8">
-      {/* Header */}
+
+      {/* Top Bar */}
       <div className="flex items-center justify-between mb-8">
         <h1 className="text-4xl font-bold text-gray-900">Admin Dashboard</h1>
 
@@ -209,43 +179,40 @@ export default function AdminPage() {
         </div>
       </div>
 
-      {/* Form Create / Edit */}
+      {/* Form */}
       {showForm ? (
-        <Card className="mb-8">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">
-            {editingDomain ? 'Edit Domain' : 'Create New Domain'}
+        <Card className="mb-8 p-6">
+          <h2 className="text-2xl font-bold mb-6">
+            {editingDomain ? 'Edit Domain' : 'Create Domain'}
           </h2>
 
           <DomainForm
             initialData={editingDomain || undefined}
             onSubmit={editingDomain ? handleUpdate : handleCreate}
-            onCancel={handleCancelForm}
+            onCancel={() => {
+              setShowForm(false);
+              setEditingDomain(null);
+            }}
           />
         </Card>
       ) : (
         <div className="mb-8">
           <Button onClick={() => setShowForm(true)} className="flex items-center gap-2">
-            <Plus className="w-5 h-5" />
-            Create New Domain
+            <Plus className="w-5 h-5" /> Create New Domain
           </Button>
         </div>
       )}
 
       {/* Domain List */}
-      <Card>
-        <h2 className="text-2xl font-bold text-gray-900 mb-6">
-          All Domains ({domains.length})
-        </h2>
+      <Card className="p-6">
+        <h2 className="text-2xl font-bold mb-6">All Domains ({domains.length})</h2>
 
         {loading ? (
-          <div className="text-center py-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto"></div>
-            <p className="mt-4 text-gray-600">Loading domains...</p>
-          </div>
+          <p className="text-gray-600 text-center py-10">Loading...</p>
         ) : (
           <DomainList
             domains={domains}
-            onEdit={handleEdit}
+            onEdit={setEditingDomain}
             onDelete={handleDelete}
           />
         )}
