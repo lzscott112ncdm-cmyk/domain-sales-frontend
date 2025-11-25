@@ -12,6 +12,36 @@ import { DomainForm } from '@/components/admin/domain-form';
 import { Lock, Plus } from 'lucide-react';
 
 export default function AdminPage() {
+  const API_BASE = process.env.NEXT_PUBLIC_API_BASE!;
+const ADMIN_TOKEN = process.env.NEXT_PUBLIC_ADMIN_TOKEN!;
+
+const [isRecalcLoading, setIsRecalcLoading] = React.useState(false);
+
+async function handleRecalculateBRL() {
+  try {
+    setIsRecalcLoading(true);
+    const res = await fetch(`${API_BASE}/api/admin/recalculate-brl`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${ADMIN_TOKEN}`,
+      },
+    });
+
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      alert(`Error: ${data.error || 'Failed to recalculate BRL prices.'}`);
+      return;
+    }
+
+    alert(`Updated BRL prices for ${data.updated} domains.`);
+  } catch (e) {
+    alert('Unexpected error while recalculating BRL prices.');
+  } finally {
+    setIsRecalcLoading(false);
+  }
+}
+
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [token, setToken] = useState('');
   const [tokenInput, setTokenInput] = useState('');
@@ -114,6 +144,14 @@ export default function AdminPage() {
 
   if (!isAuthenticated) {
     return (
+      <button
+  onClick={handleRecalculateBRL}
+  disabled={isRecalcLoading}
+  style={{ marginBottom: '12px' }}
+>
+  {isRecalcLoading ? 'Recalculando preços em BRL…' : 'Recalcular preços em BRL'}
+</button>
+
       <div className="container mx-auto px-4 py-16">
         <Card className="max-w-md mx-auto">
           <div className="text-center mb-6">
