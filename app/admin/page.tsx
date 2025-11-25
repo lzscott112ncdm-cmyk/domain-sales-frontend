@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -15,34 +14,34 @@ export default function AdminPage() {
   const API_BASE = process.env.NEXT_PUBLIC_API_BASE!;
   const ADMIN_TOKEN = process.env.NEXT_PUBLIC_ADMIN_TOKEN!;
 
-  // FIXED HERE - removed React.
   const [isRecalcLoading, setIsRecalcLoading] = useState(false);
 
+  async function handleRecalculateBRL() {
+    try {
+      setIsRecalcLoading(true);
 
-async function handleRecalculateBRL() {
-  try {
-    setIsRecalcLoading(true);
-    const res = await fetch(`${API_BASE}/api/admin/recalculate-brl`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${ADMIN_TOKEN}`,
-      },
-    });
+      const res = await fetch(`${API_BASE}/api/admin/recalculate-brl`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${ADMIN_TOKEN}`,
+        },
+      });
 
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) {
-      alert(`Error: ${data.error || 'Failed to recalculate BRL prices.'}`);
-      return;
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        alert(`Error: ${data.error || 'Failed to recalculate BRL prices.'}`);
+        return;
+      }
+
+      alert(`Updated BRL prices for ${data.updated} domains.`);
+    } catch (e) {
+      alert('Unexpected error while recalculating BRL prices.');
+    } finally {
+      setIsRecalcLoading(false);
     }
-
-    alert(`Updated BRL prices for ${data.updated} domains.`);
-  } catch (e) {
-    alert('Unexpected error while recalculating BRL prices.');
-  } finally {
-    setIsRecalcLoading(false);
   }
-}
 
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [token, setToken] = useState('');
@@ -54,7 +53,6 @@ async function handleRecalculateBRL() {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    // Check if token exists in localStorage
     const storedToken = localStorage.getItem('admin_token');
     if (storedToken) {
       setToken(storedToken);
@@ -144,18 +142,18 @@ async function handleRecalculateBRL() {
     setEditingDomain(null);
   };
 
+  // -------------------------
+  // LOGIN SCREEN
+  // -------------------------
   if (!isAuthenticated) {
     return (
-           <div className="container mx-auto px-4 py-16">
+      <div className="container mx-auto px-4 py-16">
         <Card className="max-w-md mx-auto">
           <div className="text-center mb-6">
             <Lock className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">
-              Admin Login
-            </h1>
-            <p className="text-gray-600">
-              Enter your admin token to access the dashboard
-            </p>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">Admin Login</h1>
+            <p className="text-gray-600">Enter your admin token to access the dashboard</p>
+
             {process.env.NEXT_PUBLIC_ADMIN_HINT && (
               <p className="text-sm text-gray-500 mt-2">
                 {process.env.NEXT_PUBLIC_ADMIN_HINT}
@@ -172,12 +170,12 @@ async function handleRecalculateBRL() {
           <div className="space-y-4">
             <Input
               type="password"
-              label="Admin Token"
               placeholder="Enter your admin token"
               value={tokenInput}
               onChange={(e) => setTokenInput(e.target.value)}
               onKeyPress={(e) => e.key === 'Enter' && handleLogin()}
             />
+
             <Button onClick={handleLogin} className="w-full">
               Login
             </Button>
@@ -187,33 +185,37 @@ async function handleRecalculateBRL() {
     );
   }
 
+  // -------------------------
+  // AUTHENTICATED SCREEN
+  // -------------------------
   return (
-  <div className="container mx-auto px-4 py-8">
-  <div className="flex items-center justify-between mb-8">
-      <h1 className="text-4xl font-bold text-gray-900">
-        Admin Dashboard
-      </h1>
+    <div className="container mx-auto px-4 py-8">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-8">
+        <h1 className="text-4xl font-bold text-gray-900">Admin Dashboard</h1>
 
-      <div className="flex gap-3">
-        <Button
-          onClick={handleRecalculateBRL}
-          disabled={isRecalcLoading}
-          variant="outline"
-        >
-          {isRecalcLoading ? 'Recalculando…' : 'Recalcular BRL'}
-        </Button>
+        <div className="flex gap-3">
+          <Button
+            onClick={handleRecalculateBRL}
+            disabled={isRecalcLoading}
+            variant="outline"
+          >
+            {isRecalcLoading ? 'Recalculando…' : 'Recalcular BRL'}
+          </Button>
 
-        <Button variant="secondary" onClick={handleLogout}>
-          Logout
-        </Button>
+          <Button variant="secondary" onClick={handleLogout}>
+            Logout
+          </Button>
+        </div>
       </div>
-    </div>
 
+      {/* Form Create / Edit */}
       {showForm ? (
         <Card className="mb-8">
           <h2 className="text-2xl font-bold text-gray-900 mb-6">
             {editingDomain ? 'Edit Domain' : 'Create New Domain'}
           </h2>
+
           <DomainForm
             initialData={editingDomain || undefined}
             onSubmit={editingDomain ? handleUpdate : handleCreate}
@@ -229,11 +231,12 @@ async function handleRecalculateBRL() {
         </div>
       )}
 
+      {/* Domain List */}
       <Card>
         <h2 className="text-2xl font-bold text-gray-900 mb-6">
           All Domains ({domains.length})
         </h2>
-        
+
         {loading ? (
           <div className="text-center py-12">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto"></div>
