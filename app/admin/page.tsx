@@ -14,7 +14,6 @@ export default function AdminPage() {
   const API_BASE = process.env.NEXT_PUBLIC_API_BASE!;
   const ADMIN_TOKEN = process.env.NEXT_PUBLIC_ADMIN_TOKEN!;
 
-  const [isRecalcLoading, setIsRecalcLoading] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [token, setToken] = useState('');
   const [tokenInput, setTokenInput] = useState('');
@@ -24,46 +23,12 @@ export default function AdminPage() {
   const [editingDomain, setEditingDomain] = useState<Domain | null>(null);
   const [error, setError] = useState('');
 
-  // -----------------------------------------
-  // FIXED: REAL AUTH CHECK
-  // -----------------------------------------
-  useEffect(() => {
-    const stored = localStorage.getItem('admin_token');
-    if (stored && stored === ADMIN_TOKEN) {
-      setIsAuthenticated(true);
-      setToken(stored);
-      loadDomains(stored);
-    }
-  }, []);
-
-  const handleLogin = () => {
-    if (!tokenInput.trim()) {
-      setError('Please enter a token');
-      return;
-    }
-
-    if (tokenInput !== ADMIN_TOKEN) {
-      setError('Invalid admin token');
-      return;
-    }
-
-    localStorage.setItem('admin_token', tokenInput);
-    setToken(tokenInput);
-    setIsAuthenticated(true);
-    setError('');
-    loadDomains(tokenInput);
-  };
-
-  const handleLogout = () => {
-    localStorage.removeItem('admin_token');
-    setIsAuthenticated(false);
-    setToken('');
-    setDomains([]);
-  };
+  const [isRecalcLoading, setIsRecalcLoading] = useState(false);
 
   async function handleRecalculateBRL() {
     try {
       setIsRecalcLoading(true);
+
       const res = await fetch(`${API_BASE}/api/admin/recalculate-brl`, {
         method: 'POST',
         headers: {
@@ -73,54 +38,58 @@ export default function AdminPage() {
       });
 
       const data = await res.json().catch(() => ({}));
+
       if (!res.ok) {
-        alert(`Error: ${data.error || 'Failed to recalculate BRL prices.'}`);
+        alert(`Error: ${data.error || 'Failed to recalc.'}`);
         return;
       }
 
       alert(`Updated BRL prices for ${data.updated} domains.`);
-    } catch (e) {
-      alert('Unexpected error while recalculating BRL prices.');
+    } catch (err) {
+      alert('Unexpected error.');
     } finally {
       setIsRecalcLoading(false);
     }
   }
+
+  useEffect(() => {
+    const stored = localStorage.getItem('admin_token');
+    if (stored && stored === ADMIN_TOKEN) {
+      setToken(stored);
+      setIsAuthenticated(true);
+      loadDomains(stored);
+    }
+  }, []);
+
+  const handleLogin = () => {
+    if (tokenInput === ADMIN_TOKEN) {
+      localStorage.setItem('admin_token', tokenInput);
+      setToken(tokenInput);
+      setIsAuthenticated(true);
+      setError('');
+      loadDomains(tokenInput);
+    } else {
+      setError('Incorrect token.');
+    }
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('admin_token');
+    setIsAuthenticated(false);
+    setToken('');
+    setDomains([]);
+  };
 
   const loadDomains = async (authToken: string) => {
     setLoading(true);
     try {
       const data = await fetchDomains({});
       setDomains(data);
-    } catch (error) {
-      console.error('Error loading domains:', error);
+    } catch (e) {
+      console.error(e);
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleCreate = async (data: any) => {
-    await createDomain(token, data);
-    await loadDomains(token);
-    setShowForm(false);
-    alert('Domain created!');
-  };
-
-  const handleUpdate = async (data: any) => {
-    if (!editingDomain) return;
-
-    await updateDomain(token, editingDomain.id, data);
-    await loadDomains(token);
-    setEditingDomain(null);
-    setShowForm(false);
-    alert('Domain updated!');
-  };
-
-  const handleDelete = async (domain: Domain) => {
-    if (!confirm(`Delete ${domain.domain_name || domain.domainName}?`)) return;
-
-    await deleteDomain(token, domain.id);
-    await loadDomains(token);
-    alert('Domain deleted.');
   };
 
   if (!isAuthenticated) {
@@ -129,8 +98,8 @@ export default function AdminPage() {
         <Card className="max-w-md mx-auto p-6">
           <div className="text-center mb-6">
             <Lock className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">Admin Login</h1>
-            <p className="text-gray-600">Enter your admin token</p>
+            <h1 className="text-3xl font-bold">Admin Login</h1>
+            <p className="text-gray-600 mt-2">Enter your admin token</p>
           </div>
 
           {error && (
@@ -139,19 +108,16 @@ export default function AdminPage() {
             </div>
           )}
 
-          <div className="space-y-4">
-            <Input
-              type="password"
-              placeholder="Admin token"
-              value={tokenInput}
-              onChange={(e) => setTokenInput(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
-            />
+          <Input
+            type="password"
+            placeholder="Admin token"
+            value={tokenInput}
+            onChange={(e) => setTokenInput(e.target.value)}
+          />
 
-            <Button className="w-full" onClick={handleLogin}>
-              Login
-            </Button>
-          </div>
+          <Button onClick={handleLogin} className="w-full mt-4">
+            Login
+          </Button>
         </Card>
       </div>
     );
@@ -160,9 +126,9 @@ export default function AdminPage() {
   return (
     <div className="container mx-auto px-4 py-8">
 
-      {/* Top Bar */}
+      {/* HEADER */}
       <div className="flex items-center justify-between mb-8">
-        <h1 className="text-4xl font-bold text-gray-900">Admin Dashboard</h1>
+        <h1 className="text-4xl font-bold">Admin Dashboard</h1>
 
         <div className="flex gap-3">
           <Button
@@ -179,16 +145,16 @@ export default function AdminPage() {
         </div>
       </div>
 
-      {/* Form */}
+      {/* CREATE BUTTON */}
       {showForm ? (
         <Card className="mb-8 p-6">
           <h2 className="text-2xl font-bold mb-6">
-            {editingDomain ? 'Edit Domain' : 'Create Domain'}
+            {editingDomain ? 'Edit Domain' : 'Create New Domain'}
           </h2>
 
           <DomainForm
             initialData={editingDomain || undefined}
-            onSubmit={editingDomain ? handleUpdate : handleCreate}
+            onSubmit={editingDomain ? updateDomain : createDomain}
             onCancel={() => {
               setShowForm(false);
               setEditingDomain(null);
@@ -196,24 +162,31 @@ export default function AdminPage() {
           />
         </Card>
       ) : (
-        <div className="mb-8">
-          <Button onClick={() => setShowForm(true)} className="flex items-center gap-2">
-            <Plus className="w-5 h-5" /> Create New Domain
-          </Button>
-        </div>
+        <Button onClick={() => setShowForm(true)} className="flex items-center gap-2 mb-8">
+          <Plus className="w-5 h-5" />
+          Create New Domain
+        </Button>
       )}
 
-      {/* Domain List */}
+      {/* DOMAIN LIST */}
       <Card className="p-6">
         <h2 className="text-2xl font-bold mb-6">All Domains ({domains.length})</h2>
 
         {loading ? (
-          <p className="text-gray-600 text-center py-10">Loading...</p>
+          <div className="text-center py-12">Loading…</div>
         ) : (
           <DomainList
             domains={domains}
-            onEdit={setEditingDomain}
-            onDelete={handleDelete}
+            onEdit={(d) => {
+              setEditingDomain(d);
+              setShowForm(true);
+            }}
+            onDelete={async (d) => {
+              if (confirm(`Delete ${d.domain_name}?`)) {
+                await deleteDomain(token, d.id);
+                loadDomains(token);
+              }
+            }}
           />
         )}
       </Card>
