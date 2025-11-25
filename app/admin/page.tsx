@@ -144,15 +144,7 @@ async function handleRecalculateBRL() {
 
   if (!isAuthenticated) {
     return (
-      <button
-  onClick={handleRecalculateBRL}
-  disabled={isRecalcLoading}
-  style={{ marginBottom: '12px' }}
->
-  {isRecalcLoading ? 'Recalculando preços em BRL…' : 'Recalcular preços em BRL'}
-</button>
-
-      <div className="container mx-auto px-4 py-16">
+           <div className="container mx-auto px-4 py-16">
         <Card className="max-w-md mx-auto">
           <div className="text-center mb-6">
             <Lock className="w-16 h-16 text-gray-400 mx-auto mb-4" />
