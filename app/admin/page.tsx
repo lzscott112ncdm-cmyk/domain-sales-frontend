@@ -186,15 +186,27 @@ async function handleRecalculateBRL() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="flex items-center justify-between mb-8">
-        <h1 className="text-4xl font-bold text-gray-900">
-          Admin Dashboard
-        </h1>
+    return (
+  <div className="container mx-auto px-4 py-8">
+    <div className="flex items-center justify-between mb-8">
+      <h1 className="text-4xl font-bold text-gray-900">
+        Admin Dashboard
+      </h1>
+
+      <div className="flex gap-3">
+        <Button
+          onClick={handleRecalculateBRL}
+          disabled={isRecalcLoading}
+          variant="outline"
+        >
+          {isRecalcLoading ? 'Recalculando…' : 'Recalcular BRL'}
+        </Button>
+
         <Button variant="secondary" onClick={handleLogout}>
           Logout
         </Button>
       </div>
+    </div>
 
       {showForm ? (
         <Card className="mb-8">
