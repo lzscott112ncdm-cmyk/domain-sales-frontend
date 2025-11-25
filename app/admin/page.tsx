@@ -208,7 +208,6 @@ async function handleRecalculateBRL() {
         </Button>
       </div>
     </div>
-  </div>
 
       {showForm ? (
         <Card className="mb-8">
