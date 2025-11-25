@@ -13,9 +13,11 @@ import { Lock, Plus } from 'lucide-react';
 
 export default function AdminPage() {
   const API_BASE = process.env.NEXT_PUBLIC_API_BASE!;
-const ADMIN_TOKEN = process.env.NEXT_PUBLIC_ADMIN_TOKEN!;
+  const ADMIN_TOKEN = process.env.NEXT_PUBLIC_ADMIN_TOKEN!;
 
-const [isRecalcLoading, setIsRecalcLoading] = useState(false);
+  // FIXED HERE - removed React.
+  const [isRecalcLoading, setIsRecalcLoading] = useState(false);
+
 
 async function handleRecalculateBRL() {
   try {
